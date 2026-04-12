@@ -50,18 +50,21 @@ if not API_ID or not API_HASH or not PHONE:
         "Missing credentials. Make sure API_ID, API_HASH, and PHONE are set in .env"
     )
 
-# ── Telethon client (single shared instance) ──────────────────────────────────
-
-client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
-
 # ── Event loop helper ─────────────────────────────────────────────────────────
-# Flask is sync; Telethon is async. We run async calls in a dedicated loop.
+# Python 3.14 no longer auto-creates an event loop, so we create and set one
+# BEFORE creating the Telethon client.
 
 loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 
 def run(coro):
     """Run an async coroutine from sync Flask context."""
     return loop.run_until_complete(coro)
+
+# ── Telethon client (single shared instance) ──────────────────────────────────
+# Must be created AFTER the event loop is set.
+
+client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
 
