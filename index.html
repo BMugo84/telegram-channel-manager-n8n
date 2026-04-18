@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram Channel Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e1117;
+      --bg2: #161b22;
+      --bg3: #1c2128;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.18);
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --text3: #6e7681;
+      --blue: #388bfd;
+      --blue-bg: rgba(56,139,253,0.12);
+      --red: #f85149;
+      --red-bg: rgba(248,81,73,0.12);
+      --green: #3fb950;
+      --green-bg: rgba(63,185,80,0.1);
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .app {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.75rem;
+    }
+
+    .header-left h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .header-left p {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .controls input,
+    .controls select {
+      height: 36px;
+      padding: 0 12px;
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .controls input { flex: 1; min-width: 180px; }
+    .controls input:focus,
+    .controls select:focus { border-color: var(--border2); }
+
+    .btn {
+      height: 36px;
+      padding: 0 16px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover { background: var(--bg3); border-color: var(--border2); }
+    .btn:active { transform: scale(0.98); }
+
+    .btn-danger {
+      border-color: rgba(248,81,73,0.35);
+      color: var(--red);
+    }
+    .btn-danger:hover { background: var(--red-bg); }
+    .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: var(--blue-bg);
+      border-color: rgba(56,139,253,0.35);
+      color: var(--blue);
+    }
+    .btn-primary:hover { background: rgba(56,139,253,0.2); }
+
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--red-bg);
+      border: 0.5px solid rgba(248,81,73,0.3);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--red);
+    }
+    .bulk-bar.visible { display: flex; }
+
+    .channel-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .channel-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .channel-card:hover { border-color: var(--border2); }
+    .channel-card.selected { border-color: rgba(248,81,73,0.4); background: var(--red-bg); }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .channel-info { flex: 1; min-width: 0; }
+
+    .channel-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-meta {
+      font-size: 12px;
+      color: var(--text2);
+      margin-top: 2px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 0.5px solid var(--border);
+      background: var(--bg3);
+      color: var(--text2);
+    }
+
+    .badge.unread {
+      background: var(--blue-bg);
+      border-color: rgba(56,139,253,0.3);
+      color: var(--blue);
+    }
+
+    .channel-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .checkbox {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: var(--red);
+    }
+
+    .empty, .loading-state {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text2);
+      font-size: 14px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      border: 0.5px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text);
+      display: none;
+      z-index: 999;
+    }
+    .toast.show { display: block; }
+    .toast.success { border-color: rgba(63,185,80,0.4); color: var(--green); background: var(--green-bg); }
+    .toast.error   { border-color: rgba(248,81,73,0.4); color: var(--red);   background: var(--red-bg); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Telegram channel manager</h1>
+      <p>Browse and leave channels from your account</p>
+    </div>
+    <button class="btn btn-primary" onclick="loadChannels()">
+      <span class="spinner" id="spin" style="display:none"></span>
+      Refresh
+    </button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total channels</div><div class="stat-value" id="stat-total">—</div></div>
+    <div class="stat"><div class="stat-label">With unread</div><div class="stat-value" id="stat-unread">—</div></div>
+    <div class="stat"><div class="stat-label">Selected</div><div class="stat-value" id="stat-selected">0</div></div>
+  </div>
+
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search by name or username..." oninput="renderList()" />
+<select id="filter-type" onchange="renderList()">
+      <option value="all">All types</option>
+      <option value="channel">Channels</option>
+      <option value="supergroup">Supergroups</option>
+      <option value="group">Groups</option>
+      <option value="bot">Bots</option>
+    </select>
+    <select id="sort-by" onchange="renderList()">
+      <option value="name">Name A–Z</option>
+      <option value="members">Most members</option>
+      <option value="unread">Most unread</option>
+    </select>
+  </div>
+
+  <div class="bulk-bar" id="bulk-bar">
+    <span id="bulk-label">0 selected</span>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="clearSelection()">Clear</button>
+      <button class="btn btn-danger" id="bulk-btn" onclick="leaveSelected()">Leave selected</button>
+    </div>
+  </div>
+
+  <div id="list-container">
+    <div class="loading-state">Click <strong>Refresh</strong> to load your channels</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const CHANNELS_URL = 'https://perfoliate-callan-labelloid.ngrok-free.dev/webhook/telegram/channels?ngrok-skip-browser-warning=1';
+  const LEAVE_URL = 'https://perfoliate-callan-labelloid.ngrok-free.dev/webhook/telegram/leave?ngrok-skip-browser-warning=1';
+
+  let allChannels = [];
+  let selected = new Set();
+
+  const AVATAR_COLORS = [
+    ['#1f4f8a','#388bfd'],['#1a4731','#3fb950'],['#5a1e1e','#f85149'],
+    ['#4a2d00','#d29922'],['#3a1a5c','#a371f7'],['#0d4a4a','#39d3c3']
+  ];
+
+  function avatarStyle(name) {
+    let h = 0;
+    for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+    const [bg, fg] = AVATAR_COLORS[h % AVATAR_COLORS.length];
+    return `background:${bg};color:${fg}`;
+  }
+
+  function initials(name) {
+    return name.split(/\s+/).slice(0,2).map(w => w[0] || '').join('').toUpperCase() || '?';
+  }
+
+  function fmt(n) { return n ? Number(n).toLocaleString() : null; }
+
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.className = 'toast', 3500);
+  }
+
+  function getFiltered() {
+    const q    = document.getElementById('search').value.toLowerCase();
+    const type = document.getElementById('filter-type').value;
+    const sort = document.getElementById('sort-by').value;
+    let list = allChannels.filter(c => {
+      const mq = c.name.toLowerCase().includes(q) || (c.username||'').toLowerCase().includes(q);
+      const mt = type === 'all' || c.type === type;
+      return mq && mt;
+    });
+    if (sort === 'members') list.sort((a,b) => (b.members_count||0) - (a.members_count||0));
+    else if (sort === 'unread') list.sort((a,b) => b.unread_count - a.unread_count);
+    else list.sort((a,b) => a.name.localeCompare(b.name));
+    return list;
+  }
+
+  function updateStats() {
+    document.getElementById('stat-total').textContent    = allChannels.length || '—';
+    document.getElementById('stat-unread').textContent   = allChannels.length ? allChannels.filter(c => c.unread_count > 0).length : '—';
+    document.getElementById('stat-selected').textContent = selected.size;
+    const bar = document.getElementById('bulk-bar');
+    if (selected.size > 0) {
+      bar.classList.add('visible');
+      document.getElementById('bulk-label').textContent = selected.size + ' selected';
+    } else {
+      bar.classList.remove('visible');
+    }
+  }
+
+  function renderList() {
+    const list = getFiltered();
+    updateStats();
+    const container = document.getElementById('list-container');
+    if (!list.length) {
+      container.innerHTML = '<div class="empty">No channels match your search</div>';
+      return;
+    }
+    container.innerHTML = '<div class="channel-list">' + list.map(c => {
+      const sel = selected.has(c.id);
+      const members = fmt(c.members_count);
+      return `<div class="channel-card ${sel ? 'selected' : ''}" id="card-${c.id}">
+        <div class="avatar" style="${avatarStyle(c.name)}">${initials(c.name)}</div>
+        <div class="channel-info">
+          <div class="channel-name" title="${c.name.replace(/"/g,'&quot;')}">${c.name}</div>
+          <div class="channel-meta">
+            <span>${c.type}</span>
+            ${members ? `<span>${members} members</span>` : ''}
+            ${c.username ? `<span>@${c.username}</span>` : ''}
+            ${c.is_muted ? '<span>muted</span>' : ''}
+          </div>
+        </div>
+        <div class="channel-actions">
+          ${c.unread_count > 0 ? `<span class="badge unread">${c.unread_count}</span>` : ''}
+          <input type="checkbox" class="checkbox" ${sel ? 'checked' : ''} onchange="toggleSelect(${c.id}, this.checked)" />
+          <button class="btn btn-danger" onclick="leaveSingle(${c.id}, ${JSON.stringify(c.name)})">Leave</button>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  function toggleSelect(id, checked) {
+    if (checked) selected.add(id); else selected.delete(id);
+    const card = document.getElementById('card-' + id);
+    if (card) card.className = 'channel-card ' + (checked ? 'selected' : '');
+    updateStats();
+  }
+
+  function clearSelection() { selected.clear(); renderList(); }
+
+  async function leaveChannel(id) {
+    const res = await fetch(LEAVE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      body: JSON.stringify({ channel_id: id })
+    });
+    if (!res.ok) throw new Error('Failed');
+  }
+
+async function leaveSingle(id, name) {
+    if (!confirm('Leave "' + name + '"? This cannot be undone.')) return;
+    try {
+      await leaveChannel(Number(id));
+      allChannels = allChannels.filter(c => c.id !== Number(id));
+      selected.delete(Number(id));
+      renderList();
+      showToast('Left "' + name + '"', 'success');
+    } catch {
+      showToast('Failed to leave "' + name + '"', 'error');
+    }
+  }
+
+  async function leaveSelected() {
+    const ids = [...selected];
+    if (!ids.length) return;
+    if (!confirm('Leave ' + ids.length + ' channel(s)? This cannot be undone.')) return;
+    const btn = document.getElementById('bulk-btn');
+    btn.disabled = true;
+    btn.textContent = 'Leaving...';
+    let done = 0, failed = 0;
+    for (const id of ids) {
+      try {
+        await leaveChannel(id);
+        allChannels = allChannels.filter(c => c.id !== id);
+        selected.delete(id);
+        done++;
+      } catch { failed++; }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    btn.disabled = false;
+    btn.textContent = 'Leave selected';
+    renderList();
+    showToast(
+      'Left ' + done + ' channel(s)' + (failed ? ', ' + failed + ' failed' : ''),
+      done ? 'success' : 'error'
+    );
+  }
+
+  async function loadChannels() {
+    const spin = document.getElementById('spin');
+    spin.style.display = 'inline-block';
+    document.getElementById('list-container').innerHTML =
+      '<div class="loading-state"><span class="spinner"></span>&nbsp; Loading your channels...</div>';
+    try {
+      const res = await fetch(CHANNELS_URL, {
+        headers: { 'ngrok-skip-browser-warning': '1' }
+      });
+      const json = await res.json();
+      allChannels = json.data || [];
+      selected.clear();
+      renderList();
+      showToast('Loaded ' + allChannels.length + ' channels', 'success');
+    } catch (e) {
+      document.getElementById('list-container').innerHTML =
+        '<div class="empty">Could not connect. Is the bridge running?</div>';
+      showToast('Failed to load channels', 'error');
+    }
+    spin.style.display = 'none';
+  }
+</script>
+</body>
+</html>

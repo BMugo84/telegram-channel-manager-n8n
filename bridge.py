@@ -121,14 +121,26 @@ def get_dialogs():
     limit       = int(request.args.get("limit", 200))
 
     async def _fetch():
+        from telethon.tl.types import User
         dialogs = await client.get_dialogs(limit=limit)
         results = []
         for d in dialogs:
-            if not isinstance(d.entity, (Channel, Chat)):
-                continue
-            serialized = serialize_dialog(d)
-            if type_filter == "all" or serialized["type"] == type_filter:
-                results.append(serialized)
+            entity = d.entity
+            if isinstance(entity, User) and entity.bot:
+                if type_filter in ("all", "bot"):
+                    results.append({
+                        "id":            entity.id,
+                        "name":          d.name,
+                        "type":          "bot",
+                        "username":      getattr(entity, "username", None),
+                        "members_count": None,
+                        "unread_count":  d.unread_count,
+                        "is_muted":      False,
+                    })
+            elif isinstance(entity, (Channel, Chat)):
+                serialized = serialize_dialog(d)
+                if type_filter == "all" or serialized["type"] == type_filter:
+                    results.append(serialized)
         return results
 
     try:
